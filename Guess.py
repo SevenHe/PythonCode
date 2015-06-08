@@ -5,7 +5,7 @@ import math
 import random
 
 secret_number = 0
-guesses = -1
+guesses = -1             # -1 for game ends with no guesses and start another game normally
 num_range = 100
 
 def new_game():
