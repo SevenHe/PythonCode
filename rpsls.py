@@ -36,7 +36,11 @@ def number_to_name(number):
 def rpsls(player_choice):
     player_number = name_to_number(player_choice)
     comp_number = random.randrange(5)
-    if (player_number - comp_number) % 5 < 2:
+    if player_number == comp_number:
+        print()
+        print('Both ', player_choice)
+        print('Equals!!')
+    elif (player_number - comp_number) % 5 < 2:
         print()
         print('Player chooses ', player_choice)
         print('Computer chooses ', number_to_name(comp_number))
