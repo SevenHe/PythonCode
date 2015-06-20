@@ -53,15 +53,15 @@ def input_guess(guess):
         print "Higher!"
         guesses -= 1
         print "Number of remaining guesses is ", guesses
-    else:
+    elif guess == secret_number and guesses != 0:
         print "Correct!!"
         guesses = -1
         new_game()
     if guesses == 0:
-        print "Number of remaining guesses is ", guesses
         print "You ran out of guesses!"
         print "The number is ", secret_number, "."
-        new_game()
+        guesses = -1
+        new_game();
 
 f = simplegui.create_frame("Guess the number", 200, 200)
 
