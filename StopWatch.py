@@ -16,16 +16,16 @@ def format(time):
         return str(first) + ":" + str(middle) + "." + str(last)
     else:
         return str(first) + ":0" + str(middle) + "." + str(last)
-    
+
 def start_button_handler():
     timer.start()
-    
+
 def stop_button_handler():
     global try_times, win_times
     try_times += 1
     if total_time % 10 == 0:
         win_times += 1
-    
+
 def reset_button_handler():
     global total_time, win_times, try_times
     if timer.is_running():
@@ -33,7 +33,7 @@ def reset_button_handler():
         total_time = 0
         win_times = 0
         try_times = 0
-    
+
 def timer_handler():
     global total_time
     total_time += 1
@@ -47,7 +47,7 @@ def draw_handler(canvas):
     canvas.draw_text(text, [(width - text_width) / 2, height /2 + 10]
                          , 60, "White")
     
-# Rsegister! 
+# Register!
 timer = simplegui.create_timer(100, timer_handler)    
 frame = simplegui.create_frame("StopWatch", width, height)
 frame.add_button("Start", start_button_handler, 110)
