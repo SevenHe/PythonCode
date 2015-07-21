@@ -13,6 +13,7 @@ card_back = simplegui.load_image("http://commondatastorage.googleapis.com/codesk
 
 in_play = False
 outcome = ""
+tip = ""
 index = 0                                # index for deck
 score = 0
 
@@ -86,8 +87,8 @@ class Hand:
         i = 0
         while i < len(self.hand_cards):
             p[0] += i * 50
-            if i == 0 and self.identity == 'Dealer':
-                canvas.draw(card_back, CARD_BACK_SIZE, [p[0] + CARD_BACK_CENTER[0], p[1] + CARD_BACK_CENTER[1]], CARD_BACK_SIZE) 
+            if i == 0 and self.identity == 'Dealer' and in_play == True:
+                canvas.draw_image(card_back, CARD_BACK_CENTER, CARD_BACK_SIZE, [p[0] + CARD_BACK_CENTER[0], p[1] + CARD_BACK_CENTER[1]], CARD_BACK_SIZE) 
             else:
                 self.hand_cards[i].draw(canvas, p)
             i += 1
@@ -98,29 +99,43 @@ class Deck:
     
     def shuffle(self):
         random.shuffle(self.deck_cards)
-      
-    def deal_card(self, circles):
+    
+    # 2 actors for circling , and 1 for player, 0 for dealer 
+    def deal_card(self, times, actor):
         global index
         i = 0
-        while i < circles * 2:
-            if index % 2 == 0:
+        if actor == 2:
+            while i < times:
+                if index % 2 == 0:
+                    player.add_card(deck_cards[index])
+                    print player.identity + " get a " + deck_cards[index].get_suit() + deck_cards[index].get_rank() 
+                    index += 1
+                else:
+                    dealer.add_card(deck_cards[index])
+                    print dealer.identity + " get a " + deck_cards[index].get_suit() + deck_cards[index].get_rank() 
+                    index += 1
+                i += 1
+        elif actor == 1:
+            while i < times:
                 player.add_card(deck_cards[index])
                 print player.identity + " get a " + deck_cards[index].get_suit() + deck_cards[index].get_rank() 
                 index += 1
-            else:
+                i += 1
+        elif actor == 0:
+            while i < times:
                 dealer.add_card(deck_cards[index])
                 print dealer.identity + " get a " + deck_cards[index].get_suit() + deck_cards[index].get_rank() 
                 index += 1
-            i += 1
-
+                i += 1
+        else:
+            print "Error!"
             
 def init_player_and_dealer():
-    global player, dealer, index, player_pos, dealer_pos
+    global player, dealer, player_pos, dealer_pos
     player_pos = [100, 250]
     dealer_pos = [100, 450]
     player = Hand('Player')
     dealer = Hand('Dealer')
-    deck.deal_card(2)
     
 def init_deck():
     global deck_cards, deck
@@ -128,27 +143,72 @@ def init_deck():
     for s in SUITS:
         for r in RANKS:
             c = Card(s, r)
-        deck_cards.append(c)
+            deck_cards.append(c)
     deck = Deck(deck_cards)
     deck.shuffle()
 
-# this button can take effect in any time , though it's in playing!
+# this button can take effect in any time , though it's in playing!(two times clicked)
 def deal():
-    global outcome, in_play
-    deck.shuffle()
-    init_player_and_dealer()
-    in_play = True
-
+    global outcome, tip, in_play, score, index
+    if in_play == True:
+        outcome = "You lose."
+        tip = "New deal?"
+        score -= 1
+        in_play = False
+    elif in_play == False:
+        outcome = ""
+        tip = "Hit or Stand?"
+        deck.shuffle()
+        init_player_and_dealer()
+        index = 0
+        in_play = True
+        print "New game begin..."
+        deck.deal_card(4, 2)
     
 def hit():
+    global player, deck, outcome, tip, score, in_play
     if in_play == True:
-        pass
+        if not player.busted():
+            deck.deal_card(1, 1)
+            if player.busted():
+                outcome = "You went busted and lose."
+                tip = "New deal?"
+                score -= 1
+                in_play = False
+    else:
+        print "Invalid operation!"
     
 def stand():
-    pass
+    global player, dealer, outcome, tip, score, in_play
+    if player.get_value() == 21:
+        outcome = "You win."
+        tip = "New deal?"
+        score += 1
+        in_play = False
+        return
+    while player.get_value() > dealer.get_value() and not dealer.busted():
+        deck.deal_card(1, 0)
+    if player.get_value() > dealer.get_value() or dealer.busted():
+        outcome = "You win."
+        tip = "New deal?"
+        score += 1
+        in_play = False
+    elif player.get_value() < dealer.get_value():
+        outcome = "You lose."
+        tip = "New deal?"
+        score -= 1
+        in_play = False
 
 def draw(canvas):
-    pass
+    global outcome, tip, in_play, player_pos, dealer_pos
+    canvas.draw_text("BlackJack", [200, 100], 30, 'Aqua')
+    canvas.draw_text("Score " + str(score), [450, 100], 20, 'Black')
+    canvas.draw_text("Dealer", [130, 200], 20, 'Black')
+    canvas.draw_text('Player', [130, 400], 20, 'Black')
+    canvas.draw_text(outcome, [300, 200], 20, 'Black')
+    canvas.draw_text(tip, [300, 400], 20, 'Black')
+    dealer.draw(canvas, dealer_pos)
+    player.draw(canvas, player_pos)
 
 frame = simplegui.create_frame("BlackJack", 600, 600)
 frame.set_canvas_background("Green")
@@ -158,7 +218,11 @@ frame.add_button("Hit", hit, 200)
 frame.add_button("Stand", stand, 200)
 frame.set_draw_handler(draw)
 
+# Initializing.
+init_deck()
+init_player_and_dealer()
 
+# Frame Starts!
 frame.start()
 
-# Then next for the button handler, and Deck_class and draw_handler!
+# The next step to improve the program is encapsulating the win or lose changes and draws.
