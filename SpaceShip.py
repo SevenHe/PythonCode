@@ -18,7 +18,7 @@ class ImageInfo:
       self.lifespan = lifespan
     else:
       self.lifespan = float('inf')
-    self.animated = animated
+      self.animated = animated
     
   def get_center(self):
     return self.center
