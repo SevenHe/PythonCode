@@ -5,6 +5,7 @@ import random
 
 WIDTH = 800
 HEIGHT = 600
+friction = 0.4
 score = 0
 lives = 3
 time = 0
@@ -70,11 +71,42 @@ class Ship:
     self.image_size = info.get_size()  
     self.radius = info.get_radius()  
   
-  def draw(self,canvas):  
-    canvas.draw_image(self.image, self.image_center, self.image_size, self.pos, self.image_size, math.radians(self.angle)) 
+  # Stop by friction!Down is unuseful!
+  def accelerate(key):
+    '''
+    if key == simplegui.KEY_MAP['down']:
+      if self.thrust:
+        self.thrust = False
+    '''
+    if key == simplegui.KEY_MAP['up']:
+      self.thrust = True
+      self.vel[1] += 3 * math.cos(math.radians(self.angle))
+      self.vel[0] += 3 * math.sin(math.radians(self.angle))
+    elif key == simplegui.KEY_MAP['left']:
+      self.angle_vel -= 5
+    elif key == simplegui.KEY_MAP['right']:
+      self.angle_vel += 5
   
+  def slow_down(key):
+    global ship_thrust_sound
+    if key == simplegui.KEY_MAP['up']:
+      self.thrust = False
+      ship_thrust_sound.rewind()
+  
+  def draw(self,canvas):
+    if self.thrust:
+      canvas.draw_image(self.image, [self.image_center[0] + 90, self.image_center[1]], self.image_size, self.pos, self.image_size, math.radians(self.angle))
+    else:
+      canvas.draw_image(self.image, self.image_center, self.image_size, self.pos, self.image_size, math.radians(self.angle))
+
   def update(self):
-    pass
+    global ship_thrust_sound, friction
+    self.angle += self.angle_vel
+    self.pos[0] += self.vel[0] * (1 - friction)
+    self.pos[1] -= self.vel[1] * (1 - friction)
+    if self.thrust:
+      ship_thrust_sound.play()
+  
   
 class Sprite:  
   def __init__(self, pos, vel, ang, ang_vel, image, info, sound = None):  
@@ -122,11 +154,24 @@ def draw(canvas):
   a_rock.update(canvas)
   a_missile.update(canvas)
 
+
+def key_up(key):
+  global my_ship
+  my_ship.slow_down(key)
+
+ 
+def key_down(key):
+  global my_ship
+  my_ship.accelerate(key)
+  
+
 def rock_spawner():
   pass
   
 frame = simplegui.create_frame("Asteroids", WIDTH, HEIGHT)
 frame.set_draw_handler(draw)
+frame.set_keyup_handler(key_up)
+frame.set_keydown_handler(key_down)
 
 my_ship = Ship([WIDTH / 2, HEIGHT / 2], [0, 0], 0, ship_image, ship_info)
 a_rock = Sprite([WIDTH / 3, HEIGHT / 3], [1, 1], 0, 0, asteroid_image, asteroid_info)
