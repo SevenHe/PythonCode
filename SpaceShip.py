@@ -9,6 +9,9 @@ friction = 0.4
 score = 0
 lives = 3
 time = 0
+started = False
+rock_group = set([])
+missile_group = set([])
 
 
 # Help function!
