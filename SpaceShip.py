@@ -14,11 +14,38 @@ rock_group = set([])
 missile_group = set([])
 
 
-# Help function!
+# Help function 1 !
 def angle_to_vector(angle):
     vertical = math.cos(math.radians(angle))
     horizontal = math.sin(math.radians(angle))
     return [horizontal, vertical]
+
+
+# 2 !
+def process_sprite_group(group, canvas):
+    for sprite in set(group):
+        sprite.draw(canvas)
+        if sprite.update():
+            group.remove(sprite)
+
+
+# 3 !
+def group_collide(group, other_object):
+    group_set = set(group)
+    for sprite in group_set:
+        if sprite.collide(other_object):
+            group.discard(sprite)
+            return True
+    return False
+
+
+# 4 !
+def group_group_collide(rocks, missiles):
+    result = 0
+    for missile in missiles:
+        if group_collide(rocks, missile):
+            result += 1
+    return result
 
 
 class ImageInfo:
@@ -93,6 +120,12 @@ class Ship:
         self.image_size = info.get_size()
         self.radius = info.get_radius()
 
+    def get_position(self):
+        return self.pos
+
+    def get_radius(self):
+        return self.radius
+
     # Stop by friction!Down is unuseful!
     def accelerate(self, key):
         """
@@ -117,24 +150,28 @@ class Ship:
             ship_thrust_sound.rewind()
 
     def shoot(self):
-        global a_missile
+        global missile_group
         direction = angle_to_vector(self.angle)
         if direction[0] > 0 and direction[1] > 0:
             a_missile = Sprite([self.pos[0] + self.image_center[0], self.pos[1] - self.image_center[1]],
                                [self.vel[0] + 4 * direction[0], self.vel[1] + 4 * direction[1]],
                                self.angle, 0, missile_image, missile_info, missile_sound)
+            missile_group.add(a_missile)
         elif direction[0] > 0 > direction[1]:
             a_missile = Sprite([self.pos[0] + self.image_center[0], self.pos[1] + self.image_center[1]],
                                [self.vel[0] + 4 * direction[0], self.vel[1] + 4 * direction[1]],
                                self.angle, 0, missile_image, missile_info, missile_sound)
+            missile_group.add(a_missile)
         elif direction[0] < 0 < direction[1]:
             a_missile = Sprite([self.pos[0] - self.image_center[0], self.pos[1] + self.image_center[1]],
                                [self.vel[0] + 4 * direction[0], self.vel[1] + 4 * direction[1]],
                                self.angle, 0, missile_image, missile_info, missile_sound)
+            missile_group.add(a_missile)
         elif direction[0] < 0 and direction[1] < 0:
             a_missile = Sprite([self.pos[0] - self.image_center[0], self.pos[1] - self.image_center[1]],
                                [self.vel[0] + 4 * direction[0], self.vel[1] + 4 * direction[1]],
                                self.angle, 0, missile_image, missile_info, missile_sound)
+            missile_group.add(a_missile)
 
     def draw(self, canvas):
         if self.thrust:
@@ -178,6 +215,22 @@ class Sprite:
             sound.rewind()
             sound.play()
 
+    def get_position(self):
+        return self.pos
+
+    def get_radius(self):
+        return self.radius
+
+    def collide(self, other_object):
+        s_pos = self.get_position()
+        o_pos = other_object.get_position()
+        s_radius = self.get_radius()
+        o_radius = other_object.get_radius()
+        if abs((s_pos[0] - o_pos[0]) ** 2 + (s_pos[1] - o_pos[1]) ** 2) <= (s_radius + o_radius) ** 2:
+            return True
+        else:
+            return False
+
     def draw(self, canvas):
         canvas.draw_image(self.image, self.image_center, self.image_size, self.pos, self.image_size,
                           math.radians(self.angle))
@@ -194,10 +247,15 @@ class Sprite:
             self.pos[1] %= HEIGHT
         elif self.pos[1] <= 0:
             self.pos[1] += HEIGHT
+        self.age += 1
+        if self.age >= self.lifespan:
+            return True
+        else:
+            return False
 
 
 def draw(canvas):
-    global time, lives, score
+    global time, lives, score, rock_group, missile_group, started
 
     # animate background
     time += 1
@@ -212,17 +270,39 @@ def draw(canvas):
                       [1.25 * wtime, HEIGHT / 2], [2.5 * wtime, HEIGHT])
 
     my_ship.draw(canvas)
-    a_rock.draw(canvas)
-    a_missile.draw(canvas)
+    process_sprite_group(rock_group, canvas)
+    process_sprite_group(missile_group, canvas)
+
+    if group_collide(rock_group, my_ship):
+        lives -= 1
+        if lives == 0:
+            lives = 3
+            started = False
+            rock_group = set([])
+            timer.stop()
+            soundtrack.rewind()
+    score += group_group_collide(rock_group, missile_group) * 10
 
     my_ship.update()
-    a_rock.update()
-    a_missile.update()
-
+    if not started:
+        canvas.draw_image(splash_image, splash_info.get_center(),
+                          splash_info.get_size(), [WIDTH / 2, HEIGHT / 2],
+                          splash_info.get_size())
     canvas.draw_text("Lives", [100, 70], 20, 'White')
     canvas.draw_text(str(lives), [100, 100], 20, 'White')
     canvas.draw_text("Score", [650, 70], 20, 'White')
     canvas.draw_text(str(score), [650, 100], 20, 'White')
+
+
+def clicked(pos):
+    global splash_info, started, soundtrack, timer
+    splash_center = splash_info.get_center()
+    splash_size = splash_info.get_size()
+    if splash_center[0] - splash_size[0] / 2 <= pos[0] <= splash_center[0] + splash_size[0] / 2:
+        if splash_center[1] - splash_size[1] / 2 <= pos[1] <= splash_center[1] + splash_size[1] / 2:
+            started = True
+            timer.start()
+            soundtrack.play()
 
 
 def key_up(key):
@@ -239,22 +319,23 @@ def key_down(key):
 
 
 def rock_spawner():
-    global a_rock
-    a_rock = Sprite([WIDTH / random.randint(0, 10), HEIGHT / random.randint(0, 10)],
-                    [random.randint(0, 3), random.randint(0, 3)],
-                    random.randint(0, 360), random.randint(0, 20), asteroid_image, asteroid_info)
+    if len(rock_group) < 12:
+        a_rock = Sprite([WIDTH / random.randint(0, 10), HEIGHT / random.randint(0, 10)],
+                        [random.randint(0, 3), random.randint(0, 3)], random.randint(0, 360), random.randint(0, 20),
+                        asteroid_image, asteroid_info)
+        rock_group.add(a_rock)
 
 
 frame = simplegui.create_frame("Asteroids", WIDTH, HEIGHT)
 frame.set_draw_handler(draw)
+frame.set_mouseclick_handler(clicked)
 frame.set_keyup_handler(key_up)
 frame.set_keydown_handler(key_down)
 
 my_ship = Ship([WIDTH / 2, HEIGHT / 2], [0, 0], 0, ship_image, ship_info)
-a_rock = Sprite([WIDTH / 3, HEIGHT / 3], [1, 1], 0, 0, asteroid_image, asteroid_info)
-a_missile = Sprite([2 * WIDTH / 3, 2 * HEIGHT / 3], [-1, 1], 0, 0, missile_image, missile_info, missile_sound)
 
 timer = simplegui.create_timer(1000.0, rock_spawner)
 
-timer.start()
 frame.start()
+
+# the next is the explosion, but i can't use codeskulptor now, then i can not analyze the image position.
